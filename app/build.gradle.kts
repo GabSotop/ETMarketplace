@@ -70,6 +70,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation)
     implementation(libs.firebase.appdistribution.gradle)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.compose.foundation)
 
 
     testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
@@ -93,6 +95,13 @@ dependencies {
 
         // Corrutinas para trabajo asincrónico
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+
+        // Para ubicación (GPS)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+        // Para iconos extendidos (Cámara, Mapa, etc.)
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+        // Coil ya lo tienes, sirve para mostrar las fotos
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

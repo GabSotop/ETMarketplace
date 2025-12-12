@@ -7,37 +7,20 @@ import com.evalenzuela.navigation.data.repository.PostRepository
 import com.evalenzuela.navigation.data.repository.PostRepositoryInterface
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class PostViewModel(
     private val repository: PostRepositoryInterface = PostRepository()
 ) : ViewModel() {
 
+    private val _rawApiPosts = MutableStateFlow<List<Post>>(emptyList())
     private val _postList = MutableStateFlow<List<Post>>(emptyList())
     val postList: StateFlow<List<Post>> = _postList
 
-    private val titulosResenas = listOf(
-        "Laptop Gamer: ¡Corre todo en Ultra!",
-        "Monitor Curvo 27: Inmersión total",
-        "Teclado Mecánico: El sonido es adictivo",
-        "Mouse Inalámbrico: Cero latencia",
-        "Disco SSD 1TB: Mi PC vuela ahora",
-        "Laptop Gamer: Buena compra, pero se calienta un poco",
-        "Monitor Curvo: Llegó impecable a Temuco",
-        "Teclado Mecánico: Ideal para programar y jugar"
-    )
 
-
-    private val cuerposResenas = listOf(
-        "Probé el Cyberpunk y el Valorant y los FPS son estables. La pantalla se ve increíble. Vale cada peso invertido.",
-        "Perfecto para diseño gráfico y gaming. La curvatura ayuda mucho a la vista después de horas de trabajo.",
-        "Los switches rojos son muy suaves. La retroiluminación RGB le da el toque perfecto a mi setup.",
-        "Tenía miedo del delay por ser inalámbrico, pero responde igual que uno con cable. La batería dura semanas.",
-        "Windows inicia en 5 segundos. La instalación fue fácil y el envío de la tienda fue muy rápido.",
-        "El rendimiento es bestial, aunque los ventiladores suenan fuerte cuando juego cosas pesadas. Recomiendo usar base.",
-        "Tenía dudas por el envío a región, pero venía con doble protección. Ningún pixel quemado.",
-        "Lo uso para trabajar todo el día y mis muñecas lo agradecen. Excelente relación precio-calidad."
-    )
+    private val _userLocalReviews = MutableStateFlow<Map<Int, List<Post>>>(emptyMap())
+    val userLocalReviews: StateFlow<Map<Int, List<Post>>> = _userLocalReviews.asStateFlow()
 
     init {
         fetchPosts()
@@ -46,23 +29,86 @@ class PostViewModel(
     private fun fetchPosts() {
         viewModelScope.launch {
             try {
-
-                val rawPosts = repository.getPosts()
-
-
-                val productReviews = rawPosts.mapIndexed { index, post ->
-                    post.copy(
-
-                        title = titulosResenas[index % titulosResenas.size],
-                        body = cuerposResenas[index % cuerposResenas.size]
-                    )
-                }
-
-                _postList.value = productReviews
-
+                val response = repository.getPosts()
+                _rawApiPosts.value = response
+                _postList.value = response
             } catch (e: Exception) {
                 println("Error al obtener reseñas: ${e.localizedMessage}")
             }
+        }
+    }
+
+    fun addUserReview(productId: Int, userName: String, content: String) {
+        val currentReviews = _userLocalReviews.value.toMutableMap()
+        val productReviews = currentReviews[productId]?.toMutableList() ?: mutableListOf()
+
+        val newReview = Post(
+            userId = 999,
+            id = (System.currentTimeMillis() % 10000).toInt(),
+            title = userName,
+            body = content
+        )
+
+        productReviews.add(0, newReview)
+        currentReviews[productId] = productReviews
+
+        _userLocalReviews.value = currentReviews
+    }
+
+    fun getReviewsForProduct(productId: Int): List<Post> {
+        val rawPosts = _rawApiPosts.value
+        if (rawPosts.isEmpty()) return emptyList()
+
+
+        val systemReviews = if (productId > 5) {
+            emptyList()
+        } else {
+            getSystemReviews(productId, rawPosts)
+        }
+
+
+        val localReviews = _userLocalReviews.value[productId] ?: emptyList()
+
+
+        return localReviews + systemReviews
+    }
+
+
+    private fun getSystemReviews(productId: Int, rawPosts: List<Post>): List<Post> {
+        val comentariosDelProducto = when (productId) {
+            1 -> listOf(
+                Pair("Rendimiento excepcional", "He probado software de renderizado y videojuegos AAA, y la respuesta del equipo es sobresaliente."),
+                Pair("Sistema de refrigeración", "Mantiene temperaturas estables incluso tras horas de uso continuo."),
+                Pair("Calidad de pantalla", "El panel ofrece colores vibrantes y un brillo adecuado.")
+            )
+            2 -> listOf(
+                Pair("Inmersión total", "La curvatura realmente marca la diferencia en juegos."),
+                Pair("Fidelidad de color", "Tras calibrarlo, cubre perfectamente el espectro sRGB."),
+                Pair("Sin píxeles muertos", "El panel llegó en perfecto estado.")
+            )
+            3 -> listOf(
+                Pair("Sensación táctil", "Los switches rojos son lineales y suaves."),
+                Pair("Silencioso", "Me sorprendió que no fuera tan ruidoso."),
+                Pair("Materiales duraderos", "Las teclas de doble inyección aseguran durabilidad.")
+            )
+            4 -> listOf(
+                Pair("Precisión del sensor", "El seguimiento es pixel a pixel."),
+                Pair("Libertad total", "Olvidarse del cable es lo mejor."),
+                Pair("Autonomía bestial", "Llevo tres semanas usándolo a diario.")
+            )
+            5 -> listOf(
+                Pair("Velocidad extrema", "Las pantallas de carga desaparecieron."),
+                Pair("Revivió mi PC", "Instalé el sistema aquí y vuela."),
+                Pair("Temperaturas bajas", "Se mantiene fresco sin disipador extra.")
+            )
+            else -> emptyList()
+        }
+
+        if (comentariosDelProducto.isEmpty()) return emptyList()
+
+        return rawPosts.mapIndexed { index, apiPost ->
+            val (titulo, cuerpo) = comentariosDelProducto[index % comentariosDelProducto.size]
+            apiPost.copy(title = titulo, body = cuerpo)
         }
     }
 }

@@ -1,203 +1,136 @@
 package com.evalenzuela.navigation.ui.screens
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.evalenzuela.navigation.ui.viewmodel.MainViewModel
-import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBarDefaults
-
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.evalenzuela.navigation.ui.viewmodel.MainViewModel
+import com.google.android.gms.location.LocationServices
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(viewModel: MainViewModel, onBack: () -> Unit) {
-    val cartItems = viewModel.cartItems.collectAsState().value
-    val total = viewModel.cartTotal.collectAsState().value
+    val cartItems by viewModel.cartItems.collectAsState()
+    val total by viewModel.cartTotal.collectAsState()
+    val locationMsg by viewModel.locationData.collectAsState()
+    val context = LocalContext.current
+
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) viewModel.updateLocation("Lat: ${loc.latitude}, Lon: ${loc.longitude}")
+                }
+            } catch (e: SecurityException) {}
+        }
+    }
 
     Scaffold(
-        topBar = { TopAppBar(
-            title = { Text("Carrito de Compras (${cartItems.size})")},
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-            ),
+        topBar = {
+            TopAppBar(
+                title = { Text("Carrito") },
+                actions = {
 
-
-            actions = {
-                if (cartItems.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.checkout() }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Vaciar Carrito",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                    if (cartItems.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.checkout() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Vaciar", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
-            }
-        )
+            )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
+        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+
+
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(Modifier.padding(12.dp).fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocationOn, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(locationMsg, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Button(
+                        onClick = {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                                    viewModel.updateLocation(if(loc!=null) "Lat: ${loc.latitude}" else "GPS Activo")
+                                }
+                            } else {
+                                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(top=8.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) { Text("Actualizar Ubicación") }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+
             if (cartItems.isEmpty()) {
-
-                EmptyCartMessage(Modifier.weight(1f))
+                Box(Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Text("Tu carrito está vacío")
+                }
             } else {
-
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(16.dp)
-                ) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
                     items(cartItems) { cartItem ->
-                        CartItemRow(
-                            title = cartItem.item.title,
-                            price = cartItem.item.price,
-                            quantity = cartItem.quantity
-                        )
-                        Divider(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            thickness = DividerDefaults.Thickness,
-                            color = DividerDefaults.color
-                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            elevation = CardDefaults.cardElevation(2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(cartItem.item.title, style = MaterialTheme.typography.titleMedium)
+                                    Text("Cant: ${cartItem.quantity} x ${cartItem.item.price}", style = MaterialTheme.typography.bodySmall)
+                                }
+
+                                IconButton(onClick = { viewModel.removeItemFromCart(cartItem.item) }) {
+                                    Icon(Icons.Default.RemoveCircle, null, tint = MaterialTheme.colorScheme.secondary)
+                                }
+                            }
+                        }
                     }
                 }
-
-
-                CheckoutReceipt(total = total, onCheckoutClick = viewModel::checkout)
             }
-        }
-    }
-}
 
-
-@Composable
-fun EmptyCartMessage(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Tu carrito está vacío ", style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-
-@Composable
-fun CartItemRow(title: String, price: String, quantity: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text("Cantidad: $quantity", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Text(price, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-    }
-}
-
-
-@Composable
-fun CheckoutReceipt(total: String, onCheckoutClick: () -> Unit) {
-
-
-    var isProcessing by remember { mutableStateOf(false) }
-
-    val animatedColor by animateColorAsState(
-        targetValue = if (isProcessing) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-        label = "ButtonColorAnimation"
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("TOTAL A PAGAR:", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    total,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Divider(Modifier.padding(vertical = 8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Total:", style = MaterialTheme.typography.titleLarge)
+                Text(total, style = MaterialTheme.typography.titleLarge)
             }
-            Spacer(modifier = Modifier.height(16.dp))
-
             Button(
-                onClick = {
-                    if (!isProcessing) {
-                        isProcessing = true
-                        onCheckoutClick()
-                    }
-                },
-                enabled = !isProcessing,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = animatedColor)
+                onClick = { viewModel.checkout() },
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                enabled = cartItems.isNotEmpty()
             ) {
-
-                Crossfade(targetState = isProcessing, label = "ButtonTextCrossfade") { state ->
-                    val buttonText = if (state) "¡Pago Procesado!" else "Finalizar Compra y Pagar"
-                    Text(buttonText, style = MaterialTheme.typography.titleMedium)
-                }
+                Text("Confirmar Compra")
             }
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = if (isProcessing) "¡Gracias por tu compra!" else "¡Recibo generado! Al pagar, el carrito se vaciará.",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isProcessing) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
         }
     }
 }

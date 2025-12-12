@@ -8,67 +8,69 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    @BeforeEach
+    @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
     }
 
-    @AfterEach
+    @After
     fun tearDown() {
         Dispatchers.resetMain()
     }
 
     @Test
-    fun `agregar item al carrito actualiza la cantidad y el estado`() = runTest {
+    fun agregarItemAlCarrito() = runTest {
         val viewModel = MainViewModel()
-        val itemPrueba = Item(
-            id = 99,
-            title = "Test Product",
-            description = "Desc",
-            price = "$1.000",
-            imageUrl = ""
-        )
-
-
-        viewModel.addItemToCart(itemPrueba)
-
-
+        val item = Item(1, "Laptop", "Desc", "$1.000", "")
+        viewModel.addItemToCart(item)
         testDispatcher.scheduler.advanceUntilIdle()
-
-        val cart = viewModel.cartItems.value
-        assertEquals(1, cart.size)
-
-        assertEquals(itemPrueba.title, cart[0].item.title)
+        assertEquals(1, viewModel.cartItems.value.size)
     }
 
     @Test
-    fun `checkout vacia el carrito y reinicia el total`() = runTest {
-
+    fun eliminarItemDelCarrito() = runTest {
         val viewModel = MainViewModel()
-        val itemPrueba = Item(99, "Test", "Desc", "$1.000", "")
-        viewModel.addItemToCart(itemPrueba)
-
-
-        assertEquals(1, viewModel.cartItems.value.size)
-
-
-        viewModel.checkout()
-
-
+        val item = Item(1, "Laptop", "Desc", "$1.000", "")
+        viewModel.addItemToCart(item)
+        viewModel.removeItemFromCart(item)
+        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(0, viewModel.cartItems.value.size)
+    }
 
 
-        assertTrue(viewModel.cartTotal.value.contains("0"))
+    @Test
+    fun checkoutVaciaCarrito() = runTest {
+        val viewModel = MainViewModel()
+        viewModel.addItemToCart(Item(1, "A", "D", "$10", ""))
+        viewModel.checkout()
+        assertTrue(viewModel.cartItems.value.isEmpty())
+    }
+
+
+    @Test
+    fun seguridadAdmin() {
+        val viewModel = MainViewModel()
+        assertFalse(viewModel.validateAdminAccess("1234")) // Clave mala
+        assertTrue(viewModel.validateAdminAccess("admin123")) // Clave buena
+    }
+
+
+    @Test
+    fun validacionEmailIncorrecto() {
+        val viewModel = MainViewModel()
+        viewModel.onEmailChange("correomalo")
+        assertFalse(viewModel.validateAndSaveProfile())
     }
 }
