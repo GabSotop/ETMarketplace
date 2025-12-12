@@ -74,10 +74,13 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
 
 
-    testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
-    testImplementation("io.kotest:kotest-assertions-core:5.8.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.junit.vintage:junit-vintage-engine:5.10.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("io.mockk:mockk:1.13.5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-    testImplementation("io.mockk:mockk:1.13.10")
+    testImplementation("org.junit.platform:junit-platform-launcher:1.10.0")
 
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
@@ -93,14 +96,12 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
-        // Corrutinas para trabajo asincrónico
+    // Corrutinas para trabajo asincrónico
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-
-        // Para ubicación (GPS)
     implementation("com.google.android.gms:play-services-location:21.0.1")
-        // Para iconos extendidos (Cámara, Mapa, etc.)
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
-        // Coil ya lo tienes, sirve para mostrar las fotos
+
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -112,6 +113,7 @@ dependencies {
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
+
 
 
 }
