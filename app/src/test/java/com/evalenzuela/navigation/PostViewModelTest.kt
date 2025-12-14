@@ -41,7 +41,7 @@ class PostViewModelTest {
         Dispatchers.resetMain()
     }
 
-    // TEST 6
+
     @Test
     fun cargaInicial() = runTest {
         val viewModel = PostViewModel(RepoFalsoSeparado())
@@ -49,7 +49,7 @@ class PostViewModelTest {
         assertEquals(3, viewModel.postList.value.size)
     }
 
-    // TEST 7
+
     @Test
     fun productoNuevoSinResenas() = runTest {
         val viewModel = PostViewModel(RepoFalsoSeparado())
@@ -58,7 +58,7 @@ class PostViewModelTest {
         assertTrue(reviews.isEmpty())
     }
 
-    // TEST 8
+
     @Test
     fun resenaLaptop() = runTest {
         val viewModel = PostViewModel(RepoFalsoSeparado())
@@ -67,7 +67,7 @@ class PostViewModelTest {
         assertEquals("Rendimiento excepcional", reviews[0].title)
     }
 
-    // TEST 9
+
     @Test
     fun resenaMonitor() = runTest {
         val viewModel = PostViewModel(RepoFalsoSeparado())
@@ -76,13 +76,13 @@ class PostViewModelTest {
         assertEquals("Inmersión total", reviews[0].title)
     }
 
-    // TEST 10
+
     @Test
     fun reemplazoIdioma() = runTest {
         val viewModel = PostViewModel(RepoFalsoSeparado())
         testDispatcher.scheduler.advanceUntilIdle()
         val reviews = viewModel.getReviewsForProduct(3)
-        // Verifica que NO usa el texto "API Titulo" del repo falso
+
         assertEquals("Sensación táctil", reviews[0].title)
     }
 }
